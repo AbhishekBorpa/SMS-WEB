@@ -8,6 +8,7 @@ import BroadcastCenter from '../../components/BroadcastCenter';
 import CanteenManager from '../../components/CanteenManager';
 import ChatHub from '../../components/ChatHub';
 import ClassTable from '../../components/ClassTable';
+import ClubManager from '../../components/ClubManager';
 import DashboardCharts from '../../components/DashboardCharts';
 import LibraryManager from '../../components/LibraryManager';
 import QuizBuilder from '../../components/QuizBuilder';
@@ -33,6 +34,9 @@ export default function AdminDashboard() {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
 
+    // Filter State
+    const [selectedClass, setSelectedClass] = useState('');
+
     // Edit Mode State
     const [editMode, setEditMode] = useState(false);
     const [editId, setEditId] = useState(null);
@@ -46,9 +50,7 @@ export default function AdminDashboard() {
     const [className, setClassName] = useState('');
     const [classSubject, setClassSubject] = useState('');
     const [classTeacher, setClassTeacher] = useState('');
-    const [classDay, setClassDay] = useState('Monday');
-    const [classStart, setClassStart] = useState('');
-    const [classEnd, setClassEnd] = useState('');
+    const [scheduleSlots, setScheduleSlots] = useState([{ day: 'Monday', startTime: '', endTime: '' }]);
 
     // Transport Form States
     const [routeName, setRouteName] = useState('');
@@ -68,15 +70,30 @@ export default function AdminDashboard() {
             return;
         }
         fetchStats();
-    }, [router]);
+
+        // Fetch classes for dropdown if not already fetched
+        if (classes.length === 0) fetchClasses();
+    }, [router, selectedClass]); // Re-fetch when selectedClass changes
 
     const fetchStats = async () => {
         try {
             const token = localStorage.getItem('adminToken');
-            const { data } = await axios.get(`${API_BASE_URL}/stats`, {
+
+            // 1. Fetch Basic Dashboard Counts
+            const statsRes = await axios.get(`${API_BASE_URL}/stats`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            setStats(data);
+
+            // 2. Fetch Detailed Analytics (Charts) with Filter
+            const analyticsUrl = selectedClass
+                ? `${API_BASE_URL}/stats/analytics?classId=${selectedClass}`
+                : `${API_BASE_URL}/stats/analytics`;
+
+            const analyticsRes = await axios.get(analyticsUrl, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            setStats({ ...statsRes.data, ...analyticsRes.data });
         } catch (error) {
             console.error(error);
         }
@@ -86,7 +103,13 @@ export default function AdminDashboard() {
         try {
             setLoading(true);
             const token = localStorage.getItem('adminToken');
-            const { data } = await axios.get(`${API_BASE_URL}/users?role=${role}`, {
+
+            let url = `${API_BASE_URL}/users?role=${role}`;
+            if (role === 'Student' && selectedClass) {
+                url += `&classId=${selectedClass}`;
+            }
+
+            const { data } = await axios.get(url, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (role === 'Teacher') setTeachers(data);
@@ -129,10 +152,15 @@ export default function AdminDashboard() {
         try {
             setLoading(true);
             const token = localStorage.getItem('adminToken');
+
+            const loansUrl = selectedClass
+                ? `${API_BASE_URL}/library/loans?classId=${selectedClass}`
+                : `${API_BASE_URL}/library/loans`;
+
             const booksRes = await axios.get(`${API_BASE_URL}/library`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            const loansRes = await axios.get(`${API_BASE_URL}/library/loans`, {
+            const loansRes = await axios.get(loansUrl, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setBooks(booksRes.data);
@@ -144,7 +172,11 @@ export default function AdminDashboard() {
         try {
             setLoading(true);
             const token = localStorage.getItem('adminToken');
-            const { data } = await axios.get(`${API_BASE_URL}/notices`, {
+            const url = selectedClass
+                ? `${API_BASE_URL}/notices?classId=${selectedClass}`
+                : `${API_BASE_URL}/notices`;
+
+            const { data } = await axios.get(url, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setNotices(data);
@@ -159,9 +191,12 @@ export default function AdminDashboard() {
         if (activeTab === 'students') fetchUsers('Student');
         if (activeTab === 'classes') fetchClasses();
         if (activeTab === 'transport') fetchRoutes();
-        if (activeTab === 'library') fetchLibrary();
+        if (activeTab === 'library') { fetchLibrary(); fetchUsers('Student'); }
+        if (activeTab === 'finance') fetchUsers('Student'); // Fetch students for fee management
         if (activeTab === 'broadcasts') fetchNotices();
-    }, [activeTab]);
+        if (activeTab === 'reports') fetchUsers('Student'); // Re-fetch students for reports
+        // Canteen fetches its own data internally when prop changes
+    }, [activeTab, selectedClass]); // Add selectedClass dependency to trigger refetch for active tab
 
     const resetForms = () => {
         setNewName(''); setNewEmail(''); setNewMobile('');
@@ -240,7 +275,7 @@ export default function AdminDashboard() {
                 name: className,
                 subject: classSubject,
                 teacherId: classTeacher,
-                schedule: [{ day: classDay, startTime: classStart, endTime: classEnd }]
+                schedule: scheduleSlots
             };
 
             if (editMode) {
@@ -283,10 +318,10 @@ export default function AdminDashboard() {
         setClassName(cls.name);
         setClassSubject(cls.subject);
         setClassTeacher(cls.teacher?._id || cls.teacher);
-        if (cls.schedule && cls.schedule[0]) {
-            setClassDay(cls.schedule[0].day);
-            setClassStart(cls.schedule[0].startTime);
-            setClassEnd(cls.schedule[0].endTime);
+        if (cls.schedule && cls.schedule.length > 0) {
+            setScheduleSlots(cls.schedule);
+        } else {
+            setScheduleSlots([{ day: 'Monday', startTime: '', endTime: '' }]);
         }
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
@@ -329,6 +364,30 @@ export default function AdminDashboard() {
         } catch (err) { alert('Return failed'); }
     };
 
+    const handleAddBook = async (bookData) => {
+        try {
+            const token = localStorage.getItem('adminToken');
+            await axios.post(`${API_BASE_URL}/library`, bookData, { headers: { Authorization: `Bearer ${token}` } });
+            alert('Book added successfully!');
+            fetchLibrary();
+        } catch (error) {
+            console.error(error);
+            alert('Failed to add book');
+        }
+    };
+
+    const handleIssueBook = async (details) => {
+        try {
+            const token = localStorage.getItem('adminToken');
+            await axios.post(`${API_BASE_URL}/library/loans`, details, { headers: { Authorization: `Bearer ${token}` } });
+            alert('Book issued successfully!');
+            fetchLibrary();
+        } catch (error) {
+            console.error(error);
+            alert('Failed to issue book');
+        }
+    };
+
     return (
         <div className="flex min-h-screen bg-slate-50 font-sans">
             <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} logout={logout} />
@@ -366,6 +425,16 @@ export default function AdminDashboard() {
                                 <p className="text-slate-500 mt-2">Welcome back to your command center.</p>
                             </div>
                             <div className="flex space-x-3">
+                                <select
+                                    value={selectedClass}
+                                    onChange={(e) => setSelectedClass(e.target.value)}
+                                    className="p-3 bg-white rounded-xl border border-slate-100 shadow-sm focus:border-orange-500 outline-none text-slate-600 font-medium"
+                                >
+                                    <option value="">All Classes</option>
+                                    {classes.map(cls => (
+                                        <option key={cls._id} value={cls._id}>{cls.name}</option>
+                                    ))}
+                                </select>
                                 <button onClick={fetchStats} className="p-3 bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-all text-slate-400 hover:text-orange-500">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
                                 </button>
@@ -408,7 +477,8 @@ export default function AdminDashboard() {
 
                         <DashboardCharts
                             revenueTrend={stats?.revenueTrend || []}
-                            studentDistribution={stats?.studentDistribution || []}
+                            attendanceStats={stats?.attendanceStats || {}}
+                            academicStats={stats?.academicStats || {}}
                         />
 
                         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
@@ -530,23 +600,72 @@ export default function AdminDashboard() {
                                                 ))}
                                             </select>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Day</label>
-                                                <select value={classDay} onChange={(e) => setClassDay(e.target.value)} className="w-full px-4 py-3 rounded-xl border-2 border-slate-100 focus:border-orange-500 focus:ring-0 outline-none transition-all font-medium text-slate-700 bg-white">
-                                                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => (
-                                                        <option key={day} value={day}>{day}</option>
-                                                    ))}
-                                                </select>
+
+                                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                            <div className="flex justify-between items-center mb-4">
+                                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Schedule Slots</label>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setScheduleSlots([...scheduleSlots, { day: 'Monday', startTime: '', endTime: '' }])}
+                                                    className="text-orange-500 text-xs font-bold hover:underline"
+                                                >
+                                                    + Add Slot
+                                                </button>
                                             </div>
-                                            <div>
-                                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Start Time</label>
-                                                <input type="time" required value={classStart} onChange={(e) => setClassStart(e.target.value)} className="w-full px-4 py-3 rounded-xl border-2 border-slate-100 focus:border-orange-500 focus:ring-0 outline-none transition-all font-medium text-slate-700" />
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">End Time</label>
-                                            <input type="time" required value={classEnd} onChange={(e) => setClassEnd(e.target.value)} className="w-full px-4 py-3 rounded-xl border-2 border-slate-100 focus:border-orange-500 focus:ring-0 outline-none transition-all font-medium text-slate-700" />
+                                            {scheduleSlots.map((slot, index) => (
+                                                <div key={index} className="grid grid-cols-7 gap-2 mb-2 items-end">
+                                                    <div className="col-span-3">
+                                                        <select
+                                                            value={slot.day}
+                                                            onChange={(e) => {
+                                                                const newSlots = [...scheduleSlots];
+                                                                newSlots[index].day = e.target.value;
+                                                                setScheduleSlots(newSlots);
+                                                            }}
+                                                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                                                        >
+                                                            {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => (
+                                                                <option key={day} value={day}>{day}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                    <div className="col-span-2">
+                                                        <input
+                                                            type="time"
+                                                            value={slot.startTime}
+                                                            onChange={(e) => {
+                                                                const newSlots = [...scheduleSlots];
+                                                                newSlots[index].startTime = e.target.value;
+                                                                setScheduleSlots(newSlots);
+                                                            }}
+                                                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                                                            required
+                                                        />
+                                                    </div>
+                                                    <div className="col-span-2 flex gap-2">
+                                                        <input
+                                                            type="time"
+                                                            value={slot.endTime}
+                                                            onChange={(e) => {
+                                                                const newSlots = [...scheduleSlots];
+                                                                newSlots[index].endTime = e.target.value;
+                                                                setScheduleSlots(newSlots);
+                                                            }}
+                                                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                                                            required
+                                                        />
+                                                        {scheduleSlots.length > 1 && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setScheduleSlots(scheduleSlots.filter((_, i) => i !== index))}
+                                                                className="text-red-400 hover:text-red-600"
+                                                            >
+                                                                &times;
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
 
                                         <button type="submit" disabled={loading} className={`w-full py-4 rounded-xl font-bold shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 hover:-translate-y-0.5 transition-all text-white ${editMode ? 'bg-slate-800 hover:bg-slate-900' : 'bg-gradient-to-r from-orange-500 to-orange-600'}`}>
@@ -558,7 +677,7 @@ export default function AdminDashboard() {
 
                             <div className="xl:col-span-2">
                                 <ClassTable
-                                    classes={classes}
+                                    classes={selectedClass ? classes.filter(c => c._id === selectedClass) : classes}
                                     onEdit={startEditClass}
                                     onDelete={handleDeleteClass}
                                 />
@@ -601,7 +720,15 @@ export default function AdminDashboard() {
                             <h1 className="text-3xl font-bold text-slate-900">Library Circulation</h1>
                             <p className="text-slate-500 mt-2">Track book sets and student loans.</p>
                         </header>
-                        <LibraryManager books={books} loans={loans} onReturn={handleReturnBook} onDeleteBook={async (id) => { if (confirm('Delete book?')) { await axios.delete(`${API_BASE_URL}/library/${id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } }); fetchLibrary(); } }} />
+                        <LibraryManager
+                            books={books}
+                            loans={loans}
+                            students={students}
+                            onReturn={handleReturnBook}
+                            onAddBook={handleAddBook}
+                            onIssue={handleIssueBook}
+                            onDeleteBook={async (id) => { if (confirm('Delete book?')) { await axios.delete(`${API_BASE_URL}/library/${id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } }); fetchLibrary(); } }}
+                        />
                     </div>
                 )}
 
@@ -612,7 +739,7 @@ export default function AdminDashboard() {
                             <h1 className="text-3xl font-bold text-slate-900">Weekly Timetable</h1>
                             <p className="text-slate-500 mt-2">Optimize schedules using AI-powered clash detection.</p>
                         </header>
-                        <TimetableHub classes={classes} />
+                        <TimetableHub classes={selectedClass ? classes.filter(c => c._id === selectedClass) : classes} />
                     </div>
                 )}
 
@@ -622,13 +749,33 @@ export default function AdminDashboard() {
                     </div>
                 )}
 
+                {activeTab === 'finance' && (
+                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <header>
+                            <h1 className="text-3xl font-bold text-slate-900">Financial Management</h1>
+                            <p className="text-slate-500 mt-2">Track fees, collections, and dues.</p>
+                        </header>
+                        <FeeManager classes={classes} students={users.filter(u => u.role === 'Student')} />
+                    </div>
+                )}
+
+                {activeTab === 'messages' && (
+                    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <header>
+                            <h1 className="text-3xl font-bold text-slate-900">Messages</h1>
+                            <p className="text-slate-500 mt-2">Connect with your school community.</p>
+                        </header>
+                        {user && <ChatSystem currentUser={user} />}
+                    </div>
+                )}
+
                 {activeTab === 'broadcasts' && (
                     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <header>
                             <h1 className="text-3xl font-bold text-slate-900">Communication Center</h1>
                             <p className="text-slate-500 mt-2">Broadcast urgent notices and newsletters.</p>
                         </header>
-                        <BroadcastCenter notices={notices} onRefresh={fetchNotices} />
+                        <BroadcastCenter notices={notices} onRefresh={fetchNotices} classes={classes} selectedClass={selectedClass} />
                     </div>
                 )}
 
@@ -648,7 +795,17 @@ export default function AdminDashboard() {
                             <h1 className="text-3xl font-bold text-slate-900">Canteen Inventory</h1>
                             <p className="text-slate-500 mt-2">Manage stock levels and menu availability.</p>
                         </header>
-                        <CanteenManager />
+                        <CanteenManager selectedClass={selectedClass} />
+                    </div>
+                )}
+
+                {activeTab === 'clubs' && (
+                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <header>
+                            <h1 className="text-3xl font-bold text-slate-900">Clubs & Societies</h1>
+                            <p className="text-slate-500 mt-2">Oversee student organizations and activities.</p>
+                        </header>
+                        <ClubManager teachers={teachers} />
                     </div>
                 )}
 

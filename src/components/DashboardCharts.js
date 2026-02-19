@@ -1,8 +1,20 @@
 'use client';
-import { Area, AreaChart, Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart, PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
-export default function DashboardCharts({ revenueTrend, studentDistribution }) {
+export default function DashboardCharts({ revenueTrend, attendanceStats, academicStats }) {
     const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+
+    // Transform academic data for charts
+    const academicData = academicStats?.labels?.map((label, index) => ({
+        subject: label,
+        score: academicStats.data[index]
+    })) || [];
+
+    // Transform attendance data
+    const attendanceData = attendanceStats?.labels?.map((label, index) => ({
+        label: label,
+        value: attendanceStats.data[index]
+    })) || [];
 
     return (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
@@ -11,51 +23,72 @@ export default function DashboardCharts({ revenueTrend, studentDistribution }) {
                 <div className="flex justify-between items-center mb-8">
                     <div>
                         <h3 className="text-xl font-bold text-slate-800">Revenue Growth</h3>
-                        <p className="text-sm text-slate-400 mt-1">Monthly income trends from fee collection.</p>
+                        <p className="text-sm text-slate-400 mt-1">Monthly income trends.</p>
                     </div>
-                    <div className="px-3 py-1 bg-emerald-50 text-emerald-600 text-xs font-black rounded-lg uppercase tracking-widest">+12.4%</div>
                 </div>
                 <div className="h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={revenueTrend}>
+                        <AreaChart data={revenueTrend?.labels?.map((l, i) => ({ name: l, revenue: revenueTrend.data[i] })) || []}>
                             <defs>
                                 <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="5%" stopColor="#f97316" stopOpacity={0.1} />
                                     <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
                                 </linearGradient>
                             </defs>
-                            <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} dy={10} />
-                            <YAxis hide />
-                            <Tooltip
-                                contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                                itemStyle={{ fontWeight: 'bold' }}
-                            />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} dy={10} />
+                            <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
                             <Area type="monotone" dataKey="revenue" stroke="#f97316" strokeWidth={4} fillOpacity={1} fill="url(#colorRevenue)" />
                         </AreaChart>
                     </ResponsiveContainer>
                 </div>
             </div>
 
-            {/* Student Distribution Bar Chart */}
+            {/* Attendance Radar/Line Chart */}
             <div className="bg-white p-8 rounded-3xl shadow-lg shadow-slate-200/50 border border-slate-100">
                 <div className="flex justify-between items-center mb-8">
                     <div>
-                        <h3 className="text-xl font-bold text-slate-800">Enrollment by Class</h3>
-                        <p className="text-sm text-slate-400 mt-1">Distribution of students across grades.</p>
+                        <h3 className="text-xl font-bold text-slate-800">Attendance Analysis</h3>
+                        <p className="text-sm text-slate-400 mt-1">Attendance percentage.</p>
                     </div>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-300"><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                 </div>
                 <div className="h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={studentDistribution}>
-                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} dy={10} />
-                            <YAxis hide />
-                            <Tooltip
-                                cursor={{ fill: '#f8fafc' }}
-                                contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                            />
-                            <Bar dataKey="students" radius={[8, 8, 0, 0]}>
-                                {studentDistribution.map((entry, index) => (
+                        {attendanceData.length > 5 ? (
+                            <LineChart data={attendanceData}>
+                                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                                <Tooltip contentStyle={{ borderRadius: '16px' }} />
+                                <Line type="monotone" dataKey="value" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} />
+                            </LineChart>
+                        ) : (
+                            <RadarChart cx="50%" cy="50%" outerRadius="80%" data={attendanceData}>
+                                <PolarGrid />
+                                <PolarAngleAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 12 }} />
+                                <PolarRadiusAxis angle={30} domain={[0, 100]} />
+                                <Radar name="Attendance" dataKey="value" stroke="#10b981" fill="#10b981" fillOpacity={0.6} />
+                                <Tooltip />
+                            </RadarChart>
+                        )}
+                    </ResponsiveContainer>
+                </div>
+            </div>
+
+            {/* Academic Performance Bar Chart */}
+            <div className="xl:col-span-2 bg-white p-8 rounded-3xl shadow-lg shadow-slate-200/50 border border-slate-100">
+                <div className="flex justify-between items-center mb-8">
+                    <div>
+                        <h3 className="text-xl font-bold text-slate-800">Academic Performance</h3>
+                        <p className="text-sm text-slate-400 mt-1">Average scores.</p>
+                    </div>
+                </div>
+                <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={academicData}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                            <XAxis dataKey="subject" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} dy={10} />
+                            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
+                            <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '16px', border: 'none' }} />
+                            <Bar dataKey="score" radius={[8, 8, 0, 0]} barSize={40}>
+                                {academicData.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                 ))}
                             </Bar>
