@@ -1,3 +1,4 @@
+import API_BASE_URL from '@/config/api';
 import axios from 'axios';
 import { useEffect, useState } from 'react';
 
@@ -19,7 +20,7 @@ export default function SettingsView() {
     const fetchSettings = async () => {
         try {
             const token = localStorage.getItem('adminToken');
-            const { data } = await axios.get('http://localhost:5002/api/settings', {
+            const { data } = await axios.get(`${API_BASE_URL}/settings`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (data) setSettings(data);
@@ -39,7 +40,7 @@ export default function SettingsView() {
 
         try {
             const token = localStorage.getItem('adminToken');
-            await axios.put('http://localhost:5002/api/settings', settings, {
+            await axios.put(`${API_BASE_URL}/settings`, settings, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setMessage('Success! Settings updated.');

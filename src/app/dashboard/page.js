@@ -1,4 +1,5 @@
 'use client';
+import API_BASE_URL from '@/config/api';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -72,7 +73,7 @@ export default function AdminDashboard() {
     const fetchStats = async () => {
         try {
             const token = localStorage.getItem('adminToken');
-            const { data } = await axios.get('http://localhost:5002/api/stats', {
+            const { data } = await axios.get(`${API_BASE_URL}/stats`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setStats(data);
@@ -85,7 +86,7 @@ export default function AdminDashboard() {
         try {
             setLoading(true);
             const token = localStorage.getItem('adminToken');
-            const { data } = await axios.get(`http://localhost:5002/api/users?role=${role}`, {
+            const { data } = await axios.get(`${API_BASE_URL}/users?role=${role}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (role === 'Teacher') setTeachers(data);
@@ -101,7 +102,7 @@ export default function AdminDashboard() {
         try {
             setLoading(true);
             const token = localStorage.getItem('adminToken');
-            const { data } = await axios.get('http://localhost:5002/api/classes', {
+            const { data } = await axios.get(`${API_BASE_URL}/classes`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setClasses(data);
@@ -117,7 +118,7 @@ export default function AdminDashboard() {
         try {
             setLoading(true);
             const token = localStorage.getItem('adminToken');
-            const { data } = await axios.get('http://localhost:5002/api/transport', {
+            const { data } = await axios.get(`${API_BASE_URL}/transport`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setRoutes(data);
@@ -128,10 +129,10 @@ export default function AdminDashboard() {
         try {
             setLoading(true);
             const token = localStorage.getItem('adminToken');
-            const booksRes = await axios.get('http://localhost:5002/api/library', {
+            const booksRes = await axios.get(`${API_BASE_URL}/library`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            const loansRes = await axios.get('http://localhost:5002/api/library/loans', {
+            const loansRes = await axios.get(`${API_BASE_URL}/library/loans`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setBooks(booksRes.data);
@@ -143,7 +144,7 @@ export default function AdminDashboard() {
         try {
             setLoading(true);
             const token = localStorage.getItem('adminToken');
-            const { data } = await axios.get('http://localhost:5002/api/notices', {
+            const { data } = await axios.get(`${API_BASE_URL}/notices`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setNotices(data);
@@ -180,14 +181,14 @@ export default function AdminDashboard() {
             const endpoint = role === 'Teacher' ? 'teacher' : 'student';
 
             if (editMode) {
-                await axios.put(`http://localhost:5002/api/users/${editId}`, {
+                await axios.put(`${API_BASE_URL}/users/${editId}`, {
                     name: newName,
                     email: newEmail,
                     mobileNumber: newMobile
                 }, { headers: { Authorization: `Bearer ${token}` } });
                 setMessage('User updated successfully!');
             } else {
-                await axios.post(`http://localhost:5002/api/users/${endpoint}`, {
+                await axios.post(`${API_BASE_URL}/users/${endpoint}`, {
                     name: newName,
                     email: newEmail,
                     mobileNumber: newMobile
@@ -209,7 +210,7 @@ export default function AdminDashboard() {
         if (!confirm('Are you sure you want to delete this user?')) return;
         try {
             const token = localStorage.getItem('adminToken');
-            await axios.delete(`http://localhost:5002/api/users/${id}`, {
+            await axios.delete(`${API_BASE_URL}/users/${id}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             fetchUsers(role);
@@ -243,12 +244,12 @@ export default function AdminDashboard() {
             };
 
             if (editMode) {
-                await axios.put(`http://localhost:5002/api/classes/${editId}`, payload, {
+                await axios.put(`${API_BASE_URL}/classes/${editId}`, payload, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 setMessage('Class updated successfully!');
             } else {
-                await axios.post('http://localhost:5002/api/classes', payload, {
+                await axios.post(`${API_BASE_URL}/classes`, payload, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 setMessage('Class created successfully!');
@@ -267,7 +268,7 @@ export default function AdminDashboard() {
         if (!confirm('Are you sure you want to delete this class?')) return;
         try {
             const token = localStorage.getItem('adminToken');
-            await axios.delete(`http://localhost:5002/api/classes/${id}`, {
+            await axios.delete(`${API_BASE_URL}/classes/${id}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             fetchClasses();
@@ -302,9 +303,9 @@ export default function AdminDashboard() {
             const token = localStorage.getItem('adminToken');
             const payload = { routeName, vehicleNumber: vehicleNo, driverName, driverPhone };
             if (editMode) {
-                await axios.put(`http://localhost:5002/api/transport/${editId}`, payload, { headers: { Authorization: `Bearer ${token}` } });
+                await axios.put(`${API_BASE_URL}/transport/${editId}`, payload, { headers: { Authorization: `Bearer ${token}` } });
             } else {
-                await axios.post('http://localhost:5002/api/transport', payload, { headers: { Authorization: `Bearer ${token}` } });
+                await axios.post(`${API_BASE_URL}/transport`, payload, { headers: { Authorization: `Bearer ${token}` } });
             }
             resetForms();
             fetchRoutes();
@@ -315,7 +316,7 @@ export default function AdminDashboard() {
         if (!confirm('Delete route?')) return;
         try {
             const token = localStorage.getItem('adminToken');
-            await axios.delete(`http://localhost:5002/api/transport/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+            await axios.delete(`${API_BASE_URL}/transport/${id}`, { headers: { Authorization: `Bearer ${token}` } });
             fetchRoutes();
         } catch (err) { alert('Delete failed'); }
     };
@@ -323,7 +324,7 @@ export default function AdminDashboard() {
     const handleReturnBook = async (loanId) => {
         try {
             const token = localStorage.getItem('adminToken');
-            await axios.put(`http://localhost:5002/api/library/loans/${loanId}/return`, {}, { headers: { Authorization: `Bearer ${token}` } });
+            await axios.put(`${API_BASE_URL}/library/loans/${loanId}/return`, {}, { headers: { Authorization: `Bearer ${token}` } });
             fetchLibrary();
         } catch (err) { alert('Return failed'); }
     };
@@ -600,7 +601,7 @@ export default function AdminDashboard() {
                             <h1 className="text-3xl font-bold text-slate-900">Library Circulation</h1>
                             <p className="text-slate-500 mt-2">Track book sets and student loans.</p>
                         </header>
-                        <LibraryManager books={books} loans={loans} onReturn={handleReturnBook} onDeleteBook={async (id) => { if (confirm('Delete book?')) { await axios.delete(`http://localhost:5002/api/library/${id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } }); fetchLibrary(); } }} />
+                        <LibraryManager books={books} loans={loans} onReturn={handleReturnBook} onDeleteBook={async (id) => { if (confirm('Delete book?')) { await axios.delete(`${API_BASE_URL}/library/${id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } }); fetchLibrary(); } }} />
                     </div>
                 )}
 

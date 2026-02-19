@@ -14,7 +14,12 @@ export default function Overview() {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const { data } = await axios.get('http://localhost:5002/api/company/stats');
+                const token = localStorage.getItem('companyToken');
+                const { data } = await axios.get(`${API_BASE_URL}/company/stats`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
                 setStats({
                     schools: data.schools,
                     users: data.users,

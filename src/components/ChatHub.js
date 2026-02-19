@@ -1,4 +1,5 @@
 'use client';
+import API_BASE_URL, { SOCKET_URL } from '@/config/api';
 import axios from 'axios';
 import { useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
@@ -20,7 +21,7 @@ export default function ChatHub() {
         const fetchTargets = async () => {
             try {
                 const token = localStorage.getItem('adminToken');
-                const { data } = await axios.get('http://localhost:5002/api/messages/targets', {
+                const { data } = await axios.get(`${API_BASE_URL}/messages/targets`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 setTargets(data);
@@ -31,7 +32,7 @@ export default function ChatHub() {
         fetchTargets();
 
         // Socket setup
-        socketRef.current = io('http://localhost:5002');
+        socketRef.current = io(SOCKET_URL);
         if (userStr) {
             const user = JSON.parse(userStr);
             socketRef.current.emit('join', user._id);
@@ -49,7 +50,7 @@ export default function ChatHub() {
             const fetchConversation = async () => {
                 try {
                     const token = localStorage.getItem('adminToken');
-                    const { data } = await axios.get(`http://localhost:5002/api/messages/${selectedUser._id}`, {
+                    const { data } = await axios.get(`${API_BASE_URL}/messages/${selectedUser._id}`, {
                         headers: { Authorization: `Bearer ${token}` }
                     });
                     setMessages(data);
@@ -67,7 +68,7 @@ export default function ChatHub() {
 
         try {
             const token = localStorage.getItem('adminToken');
-            const { data } = await axios.post('http://localhost:5002/api/messages', {
+            const { data } = await axios.post(`${API_BASE_URL}/messages`, {
                 recipientId: selectedUser._id,
                 content: newMessage
             }, {

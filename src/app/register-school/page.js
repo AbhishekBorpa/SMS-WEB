@@ -33,7 +33,7 @@ export default function RegisterSchool() {
         setError('');
 
         try {
-            const res = await axios.post('http://localhost:5002/api/schools', formData);
+            const res = await axios.post(`${API_BASE_URL}/schools`, formData);
             setSuccess(true);
             setLoading(false);
         } catch (err) {

@@ -1,10 +1,11 @@
 'use client';
+import API_BASE_URL from '@/config/api';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 export default function CompanyLogin() {
-    const [email, setEmail] = useState('superadmin@school.com');
-    const [password, setPassword] = useState('password123');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const router = useRouter();
 
@@ -12,8 +13,7 @@ export default function CompanyLogin() {
         e.preventDefault();
         setLoading(true);
         try {
-            // Real API Call
-            const res = await fetch('http://localhost:5002/api/auth/login', {
+            const res = await fetch(`${API_BASE_URL}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })

@@ -1,20 +1,20 @@
 'use client';
+import API_BASE_URL from '@/config/api';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-export default function AdminLogin() {
+export default function LoginPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const router = useRouter();
 
-    const handleSubmit = async (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault();
         setError('');
         try {
-            // Adjust API URL if needed. Assuming backend is on port 5002
-            const { data } = await axios.post('http://localhost:5002/api/auth/login', { email, password });
+            const { data } = await axios.post(`${API_BASE_URL}/auth/login`, { email, password });
 
             if (data.role !== 'Admin') {
                 setError('Access Denied. Admins only.');

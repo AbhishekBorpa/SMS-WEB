@@ -1,18 +1,19 @@
 'use client';
+import API_BASE_URL from '@/config/api';
 import axios from 'axios';
 import { useState } from 'react';
 
-export default function QuizBuilder({ onRefresh }) {
+export default function QuizBuilder() {
     const [topic, setTopic] = useState('');
     const [loading, setLoading] = useState(false);
     const [quiz, setQuiz] = useState(null);
 
-    const handleGenerate = async () => {
+    const generateQuiz = async () => {
         if (!topic) return alert('Enter a topic first');
         setLoading(true);
         try {
             const token = localStorage.getItem('adminToken');
-            const { data } = await axios.post('http://localhost:5002/api/ai/quiz', { topic }, {
+            const { data } = await axios.post(`${API_BASE_URL}/ai/quiz`, { topic }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setQuiz(data);

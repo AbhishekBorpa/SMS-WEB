@@ -1,4 +1,5 @@
 'use client';
+import API_BASE_URL from '@/config/api';
 import axios from 'axios';
 import { format } from 'date-fns';
 import { useEffect, useState } from 'react';
@@ -11,7 +12,12 @@ export default function AuditLogs() {
     useEffect(() => {
         const fetchLogs = async () => {
             try {
-                const { data } = await axios.get('http://localhost:5002/api/company/audit-logs');
+                const token = localStorage.getItem('companyToken');
+                const { data } = await axios.get(`${API_BASE_URL}/company/audit-logs`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
                 setLogs(data.map(l => ({
                     id: l._id,
                     time: l.createdAt ? format(new Date(l.createdAt), 'MMM dd, h:mm a') : 'Unknown',

@@ -1,4 +1,5 @@
 'use client';
+import API_BASE_URL from '@/config/api';
 import axios from 'axios';
 import { useState } from 'react';
 
@@ -12,7 +13,7 @@ export default function TimetableHub({ classes, onRefresh }) {
         try {
             const token = localStorage.getItem('adminToken');
             // This endpoint simulation will "propose" an optimized schedule
-            const { data } = await axios.post('http://localhost:5002/api/ai/timetable', { classes }, {
+            const { data } = await axios.post(`${API_BASE_URL}/ai/timetable`, { classes }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 

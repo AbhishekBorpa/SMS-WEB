@@ -1,8 +1,9 @@
 'use client';
+import API_BASE_URL from '@/config/api';
 import axios from 'axios';
 import { useState } from 'react';
 
-export default function CanteenManager({ schoolId, onRefresh }) {
+export default function CanteenManager() {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(false);
     const [name, setName] = useState('');
@@ -13,7 +14,7 @@ export default function CanteenManager({ schoolId, onRefresh }) {
         setLoading(true);
         try {
             const token = localStorage.getItem('adminToken');
-            const { data } = await axios.get('http://localhost:5002/api/canteen/menu', {
+            const { data } = await axios.get(`${API_BASE_URL}/canteen/menu`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setItems(data);

@@ -1,4 +1,5 @@
 'use client';
+import API_BASE_URL from '@/config/api';
 import axios from 'axios';
 import { useEffect, useState } from 'react';
 
@@ -11,7 +12,12 @@ export default function SchoolsTable() {
     useEffect(() => {
         const fetchSchools = async () => {
             try {
-                const { data } = await axios.get('http://localhost:5002/api/company/schools');
+                const token = localStorage.getItem('companyToken');
+                const { data } = await axios.get(`${API_BASE_URL}/company/schools`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
                 setSchools(data.map(s => ({
                     id: s._id,
                     name: s.name,

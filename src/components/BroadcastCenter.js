@@ -1,4 +1,5 @@
 'use client';
+import API_BASE_URL from '@/config/api';
 import axios from 'axios';
 import { useState } from 'react';
 
@@ -13,7 +14,7 @@ export default function BroadcastCenter({ notices, onRefresh }) {
         setLoading(true);
         try {
             const token = localStorage.getItem('adminToken');
-            await axios.post('http://localhost:5002/api/notices', { title, content, priority }, {
+            await axios.post(`${API_BASE_URL}/notices`, { title, content, priority }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setTitle(''); setContent('');
